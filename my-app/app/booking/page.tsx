@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, Suspense } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Navbar from '../components/Navbar'
 import ProgressStepper from '../components/ProgressStepper'
@@ -405,6 +405,7 @@ function BookingContent() {
   const [paymentMethod, setPaymentMethod] = useState('upi')
   const [autoUpgrade, setAutoUpgrade]     = useState(false)
   const [contactNumber, setContactNumber] = useState('')
+  const router = useRouter()
 
   // ── Fare calculation ───────────────────────────────────────────────────────
 
@@ -456,6 +457,55 @@ function BookingContent() {
 
   const removePassenger = (id: number) => {
     setPassengers((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  // ── Proceed to Review & Pay ────────────────────────────────────────────────
+
+  const handleProceed = () => {
+    // Touch + validate all passenger fields
+    let hasErrors = false
+    setPassengers((prev) =>
+      prev.map((p) => {
+        const nameErr   = validateName(p.name)
+        const ageErr    = validateAge(p.age)
+        const genderErr = validateGender(p.gender)
+        if (nameErr || ageErr || genderErr) hasErrors = true
+        return {
+          ...p,
+          touched: { name: true, age: true, gender: true },
+          errors:  { name: nameErr, age: ageErr, gender: genderErr },
+        }
+      })
+    )
+    if (hasErrors) {
+      // Scroll to first error
+      setTimeout(() => {
+        document.querySelector('[aria-invalid="true"], .border-red-400')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 50)
+      return
+    }
+
+    // Build review params
+    const reviewParams = new URLSearchParams()
+    reviewParams.set('train', trainNum)
+    reviewParams.set('name', trainName)
+    reviewParams.set('class', classCode)
+    reviewParams.set('price', String(basePrice))
+    reviewParams.set('from', fromStn)
+    reviewParams.set('to', toStn)
+    reviewParams.set('date', journeyDate)
+    reviewParams.set('dep', depTime)
+    reviewParams.set('arr', arrTime)
+    reviewParams.set('dur', duration)
+    reviewParams.set('payment', paymentMethod)
+    reviewParams.set('total', String(grandTotal))
+    reviewParams.set('convFee', String(convFee))
+    reviewParams.set('gst', String(gst))
+    reviewParams.set('contact', contactNumber)
+    reviewParams.set('passengers', JSON.stringify(
+      passengers.map((p) => ({ name: p.name, age: p.age, gender: p.gender, berth: p.berth }))
+    ))
+    router.push(`/review?${reviewParams.toString()}`)
   }
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -638,11 +688,12 @@ function BookingContent() {
           {/* Proceed CTA */}
           <button
             type="button"
+            onClick={handleProceed}
             className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold
               py-4 px-6 rounded-xl text-lg tracking-wide shadow-md
               hover:scale-[1.01] active:scale-[0.99] hover:shadow-lg transition-all duration-150"
           >
-            Proceed to Pay &nbsp;— &nbsp;₹ {grandTotal.toLocaleString('en-IN')}
+            Review &amp; Pay &nbsp;— &nbsp;₹ {grandTotal.toLocaleString('en-IN')}
           </button>
         </div>
 

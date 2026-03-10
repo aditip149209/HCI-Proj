@@ -72,27 +72,61 @@ function SearchButton({ label = 'Search Trains', href = '/search' }: { label?: s
 }
 
 function BookTicketsForm() {
+  const router = useRouter()
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const [date, setDate] = useState('')
+  const [trainClass, setTrainClass] = useState('All Classes')
+  const [quota, setQuota] = useState('General')
+
+  const handleSearch = () => {
+    const params = new URLSearchParams()
+    if (from.trim())  params.set('from', from.trim().toUpperCase())
+    if (to.trim())    params.set('to', to.trim().toUpperCase())
+    if (date)         params.set('date', date)
+    if (trainClass)   params.set('class', trainClass)
+    if (quota)        params.set('quota', quota)
+    router.push(`/search?${params.toString()}`)
+  }
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
           <InputLabel>From</InputLabel>
-          <input type="text" placeholder="City or station name" className={inputClass} />
+          <input
+            type="text"
+            placeholder="City or station name"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className={inputClass}
+          />
         </div>
         <div>
           <InputLabel>To</InputLabel>
-          <input type="text" placeholder="City or station name" className={inputClass} />
+          <input
+            type="text"
+            placeholder="City or station name"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            className={inputClass}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         <div>
           <InputLabel>Date of Journey</InputLabel>
-          <input type="date" className={inputClass} />
+          <input
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className={inputClass}
+          />
         </div>
         <div>
           <InputLabel>Class</InputLabel>
-          <select className={selectClass}>
+          <select value={trainClass} onChange={(e) => setTrainClass(e.target.value)} className={selectClass}>
             <option>All Classes</option>
             <option>Sleeper (SL)</option>
             <option>Third AC (3A)</option>
@@ -104,7 +138,7 @@ function BookTicketsForm() {
         </div>
         <div>
           <InputLabel>Quota</InputLabel>
-          <select className={selectClass}>
+          <select value={quota} onChange={(e) => setQuota(e.target.value)} className={selectClass}>
             <option>General</option>
             <option>Ladies</option>
             <option>Tatkal</option>
@@ -125,7 +159,13 @@ function BookTicketsForm() {
         </label>
       </div>
 
-      <SearchButton />
+      <button
+        onClick={handleSearch}
+        className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold py-3 px-6 rounded-md text-base tracking-wide shadow-md
+          hover:scale-[1.02] active:scale-[0.98] hover:shadow-lg transition-all duration-150"
+      >
+        Search Trains
+      </button>
     </div>
   )
 }

@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '../components/Navbar'
 import ProgressStepper from '../components/ProgressStepper'
 
@@ -505,8 +505,35 @@ function FiltersSidebar() {
 
 const SORT_OPTIONS = ['Departure', 'Duration', 'Arrival', 'Price']
 
-export default function SearchPage() {
+function formatDate(iso: string): string {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+}
+
+function SearchResults() {
+  const params = useSearchParams()
+  const router = useRouter()
   const [activeSort, setActiveSort] = useState('Departure')
+
+  const fromStn    = params.get('from')  || 'ANY ORIGIN'
+  const toStn      = params.get('to')    || 'ANY DESTINATION'
+  const dateRaw    = params.get('date')  || ''
+  const trainClass = params.get('class') || 'All Classes'
+  const quota      = params.get('quota') || 'General'
+  const dateLabel  = formatDate(dateRaw)
+
+  // Filter trains that match the searched route (case-insensitive partial match)
+  const filteredTrains = TRAINS.filter((t) => {
+    const fromMatch = !params.get('from') ||
+      t.dep.station.toLowerCase().includes(fromStn.toLowerCase())
+    const toMatch = !params.get('to') ||
+      t.arr.station.toLowerCase().includes(toStn.toLowerCase())
+    return fromMatch && toMatch
+  })
+
+  const handleModify = () => router.push('/')
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-gray-950 transition-colors duration-300">
@@ -521,27 +548,21 @@ export default function SearchPage() {
       <div className="bg-[#1a3c6e] dark:bg-gray-900 text-white px-6 py-3 shadow">
         <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-3 text-sm">
           <div className="flex items-center gap-2 font-bold">
-            <span>SURATHKAL</span>
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4 text-blue-300 shrink-0"
-            >
+            <span>{fromStn}</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-blue-300 shrink-0">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
-            <span>KSR BENGALURU</span>
+            <span>{toStn}</span>
           </div>
+          {dateLabel && (<><span className="text-blue-400 hidden sm:inline">|</span><span className="text-blue-100">{dateLabel}</span></>)}
           <span className="text-blue-400 hidden sm:inline">|</span>
-          <span className="text-blue-100">Fri, 13 Mar 2026</span>
+          <span className="text-blue-100">{trainClass}</span>
           <span className="text-blue-400 hidden sm:inline">|</span>
-          <span className="text-blue-100">All Classes</span>
-          <span className="text-blue-400 hidden sm:inline">|</span>
-          <span className="text-blue-100">General Quota</span>
-          <button className="ml-auto bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold py-2 px-5 rounded-lg text-sm transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] shadow">
+          <span className="text-blue-100">{quota} Quota</span>
+          <button
+            onClick={handleModify}
+            className="ml-auto bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold py-2 px-5 rounded-lg text-sm transition-all duration-150 hover:scale-[1.02] active:scale-[0.98] shadow"
+          >
             Modify Search
           </button>
         </div>
@@ -562,8 +583,12 @@ export default function SearchPage() {
             {/* Results header */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                <strong className="text-gray-900 dark:text-white">2 Results</strong> for{' '}
-                SURATHKAL → KSR BENGALURU &nbsp;|&nbsp; Fri, 13 Mar 2026 &nbsp;|&nbsp; General
+                <strong className="text-gray-900 dark:text-white">
+                  {filteredTrains.length} {filteredTrains.length === 1 ? 'Result' : 'Results'}
+                </strong>
+                {' '}for {fromStn} → {toStn}
+                {dateLabel && <>&nbsp;|&nbsp;{dateLabel}</>}
+                &nbsp;|&nbsp;{quota}
               </p>
               <div className="flex gap-2">
                 <button className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-600 dark:text-gray-300 hover:border-[#1a3c6e] dark:hover:border-blue-400 hover:text-[#1a3c6e] transition-colors">
@@ -594,13 +619,42 @@ export default function SearchPage() {
               ))}
             </div>
 
-            {/* Train cards */}
-            {TRAINS.map((train) => (
-              <TrainCard key={train.number} train={train} />
-            ))}
+            {/* Train cards or empty state */}
+            {filteredTrains.length > 0 ? (
+              filteredTrains.map((train) => (
+                <TrainCard key={train.number} train={train} />
+              ))
+            ) : (
+              <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-12 text-center">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="M21 21l-4.35-4.35" />
+                </svg>
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No trains found for this route.</p>
+                <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Try a different source or destination, or check the spelling.</p>
+                <button
+                  onClick={handleModify}
+                  className="mt-5 bg-orange-500 hover:bg-orange-600 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all duration-150"
+                >
+                  Modify Search
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 dark:bg-gray-950 flex items-center justify-center text-gray-400 text-sm">
+        Loading results…
+      </div>
+    }>
+      <SearchResults />
+    </Suspense>
   )
 }
