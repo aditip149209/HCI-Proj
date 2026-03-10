@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 type Tab = 'book' | 'pnr' | 'schedule' | 'between'
 
@@ -57,10 +58,14 @@ const inputClass =
 const selectClass =
   'w-full border border-gray-300 dark:border-gray-600 rounded-md px-3 py-2 text-sm text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition'
 
-function SearchButton({ label = 'Search Trains' }: { label?: string }) {
+function SearchButton({ label = 'Search Trains', href = '/search' }: { label?: string; href?: string }) {
+  const router = useRouter()
   return (
-    <button className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold py-3 px-6 rounded-md text-base tracking-wide shadow-md
-      hover:scale-[1.02] active:scale-[0.98] hover:shadow-lg transition-all duration-150">
+    <button
+      onClick={() => router.push(href)}
+      className="w-full bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white font-bold py-3 px-6 rounded-md text-base tracking-wide shadow-md
+        hover:scale-[1.02] active:scale-[0.98] hover:shadow-lg transition-all duration-150"
+    >
       {label}
     </button>
   )
